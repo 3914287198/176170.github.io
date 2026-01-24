@@ -10,13 +10,20 @@ let commentsCache = new Map(); // 留言缓存
 let isCommentsLoading = false; // 留言是否正在加载
 let commentsLoadStartTime = 0; // 留言加载开始时间
 let pendingComments = []; // 用于存储用户刚提交但还未在列表中显示的留言
+let currentSource = 'lanzou';
+const sourceMap = {
+    'lanzou': './data/database.json',
+    '123pan': './data/123pan.json',
+    'baidu': './data/baidu.json',
+    'gongyi': './data/gongyi.json'
+};
 
 // 从database.json获取文件列表
 async function fetchFiles() {
     try {
         // 从DATA目录下的database.json获取文件列表
         
-        const response = await fetch('./data/database.json');
+        const response = await fetch(sourceMap[currentSource]);
         
         
         if (response.ok) {
@@ -517,6 +524,55 @@ function searchFiles() {
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
+
+    // 下载线路切换
+    const sourceButtons = document.querySelectorAll('#source-switcher button');
+    
+    // 从 localStorage 读取上次选择的线路，如果没有则默认为 'lanzou'
+    const savedSource = localStorage.getItem('preferredSource');
+    if (savedSource && sourceMap[savedSource]) {
+        currentSource = savedSource;
+    }
+    
+    // 初始化按钮状态
+    sourceButtons.forEach(btn => {
+        if (btn.getAttribute('data-source') === currentSource) {
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-primary');
+        } else {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-primary');
+        }
+        
+        btn.addEventListener('click', function() {
+            const source = this.getAttribute('data-source');
+            if (source === currentSource) return;
+            
+            // 更新当前源
+            currentSource = source;
+            // 保存用户的选择到 localStorage
+            localStorage.setItem('preferredSource', currentSource);
+            
+            // 更新按钮状态
+            sourceButtons.forEach(b => {
+                if (b.getAttribute('data-source') === currentSource) {
+                    b.classList.remove('btn-outline-primary');
+                    b.classList.add('btn-primary');
+                } else {
+                    b.classList.remove('btn-primary');
+                    b.classList.add('btn-outline-primary');
+                }
+            });
+            
+            // 重新加载文件
+            // 清空当前文件列表显示，显示加载中（可选）
+            const fileList = document.getElementById('fileList');
+            if (fileList) {
+                fileList.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">加载中...</span></div><p class="mt-2 text-muted">正在切换线路...</p></div>';
+            }
+            fetchFiles();
+        });
+    });
     
     if (searchInput && searchBtn) {
         searchBtn.addEventListener('click', searchFiles);
